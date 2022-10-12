@@ -10,9 +10,9 @@
 import numpy as np
 
 
-def softmax(sample_features, sample_labels, alpha=0.5, iterations=50):
+def softmax_train(sample_features, sample_labels, alpha=0.5, iterations=50):
     """
-    这是一个softmax回归模型的算法实现.
+    这是一个softmax回归模型的训练.
 
     此算法依赖numpy库,训练参数时使用梯度下降法,预测的属于类别c的条件概率为
     exp(w_c^T*x)/sum(exp(w_c^T*x)).
