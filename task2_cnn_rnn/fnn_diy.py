@@ -6,10 +6,10 @@
 
 """
 
-from typing import Tuple, List, Any, Union
+from typing import Tuple, List, Any
 
 import numpy as np
-from numpy import ndarray, float64
+from numpy import ndarray
 
 
 def softmax(x: ndarray) -> ndarray:
@@ -24,7 +24,7 @@ def softmax(x: ndarray) -> ndarray:
 
 def logistic(x):
     """logistic函数"""
-    z = 1 / 1 + np.exp(-x)
+    z = 1 / (1 + np.exp(-x))
     return z
 
 
@@ -84,7 +84,7 @@ def fnn_run(features, no_layer, weight, bias,
     z.append(np.dot(weight[no_layer - 1], a[-1]) + np.outer(bias[no_layer - 1],
                                                             vector_1))
     a.append(softmax(z[-1]))
-    del a[0]  # 删去不需要的第0层输出 a0
+    # del a[0]  # 删去不需要的第0层输出 a0?
     return z, a
 
 
@@ -104,8 +104,10 @@ def para_init(no_layer, no_neurons, no_features):
     weight = []
     bias = []
     for i in range(no_layer):
-        weight.append(np.random.randn(no_neurons[i + 1], no_neurons[i]) /
-                      np.sqrt(no_neurons[i]))  # S型激活函数用Xavier原则确定初始权重
+        # weight.append(np.random.randn(no_neurons[i + 1], no_neurons[i]) /
+        #               np.sqrt(no_neurons[i]))  # S型激活函数用Xavier原则
+        # 经测试,该原则导致了b的极大不稳定
+        weight.append(np.zeros((no_neurons[i + 1], no_neurons[i])))
         bias.append(np.zeros(no_neurons[i + 1]))  # 直接取0
     return weight, bias
 
@@ -132,7 +134,7 @@ def back_propagation(features, labels, no_layer, weight, bias,
     gradient_b = []
     gradient_w_no = 0  # 按样本编号索引,此处为初始化
     gradient_b_no = 0
-    for layer in range(no_layer -1):
+    for layer in range(no_layer):
         for no_f in range(no_features):  # 第几个样本
             delta = [(labels - a[-1])[:, no_f]]  # 最后一层误差项为 yn - yn^
             for i in range(no_layer - 2, -1, -1):  # 从L-1层(索引为L-2)往前迭代传播
@@ -140,10 +142,10 @@ def back_propagation(features, labels, no_layer, weight, bias,
                                                                 delta[-1]))
             delta.reverse()
             if no_f == 0:
-                gradient_w_no = np.outer(delta[layer + 1], a[layer][:, no_f])
+                gradient_w_no = np.outer(delta[layer], a[layer][:, no_f])
                 gradient_b_no = delta[layer]
             else:
-                gradient_w_no += np.outer(delta[layer + 1], a[layer][:, no_f])
+                gradient_w_no += np.outer(delta[layer], a[layer][:, no_f])
                 gradient_b_no += delta[layer]
         gradient_w.append(gradient_w_no / no_features)
         gradient_b.append(gradient_b_no / no_features)
@@ -151,7 +153,7 @@ def back_propagation(features, labels, no_layer, weight, bias,
 
 
 def fnn_train(features, labels, no_layer, no_neurons,
-              learning_rate=0.5, regular_term=0.2, iterations=50,
+              learning_rate=0.5, regular_term=0.1, iterations=200,
               activation=logistic) -> Tuple[List[Any], List[Any]]:
     """训练前馈神经网络FNN
 
@@ -182,10 +184,20 @@ def fnn_train(features, labels, no_layer, no_neurons,
 
 
 # 代码运行测试
-train_features = np.array([[1, 1], [1, 0], [1, 1], [1, 1]])
-train_labels = np.array([[1], [0]])
-set_layer = 3
-set_neurons = [5, 3, 2]
-weight, bias = fnn_train(train_features, train_labels, set_layer, set_neurons)
-# test_value = fnn_run(test_feature, set_layer, weight, bias)
-# test_result = test_value[1][-1]
+train_features = np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+                           [0, 1, 0, 1, 0, 1, 0, 0, 0, 0]])
+train_labels = np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+                         [0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+                         [0, 1, 0, 1, 0, 1, 0, 0, 0, 0]])
+train_features1 = np.array([[1, 0, 1, 0, 1, 0],
+                            [0, 1, 0, 1, 0, 1]])
+train_labels1 = np.array([[1, 0, 1, 0, 1, 0],
+                          [0, 1, 0, 1, 0, 1]])
+set_layer = 1
+set_neurons = [2]
+weight_t, bias_t = fnn_train(train_features1, train_labels1, set_layer,
+                             set_neurons)
+test_features = np.array([[2.2, -4], [2.2, -4]])
+out = fnn_run(train_features1, set_layer, weight_t, bias_t)
+labels = out[1][-1]
