@@ -7,7 +7,6 @@
 """
 
 from typing import Tuple, List, Any
-
 import numpy as np
 from numpy import ndarray
 
@@ -38,21 +37,6 @@ def tanh(x):
     """Tanh函数"""
     z = (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
     return z
-
-
-def bgd(theta, gradient, learning_rate=0.5, regular_term=0, iterations=50):
-    """(批量)梯度下降法,训练标量或向量均可
-
-    Args:
-        regular_term (): 正则项的系数
-        theta ():参数初始值
-        gradient ():梯度函数
-        learning_rate ():学习率
-        iterations (): 迭代次数
-    """
-    for i in range(iterations):
-        theta = theta - learning_rate * (gradient(theta) + regular_term * theta)
-    return theta
 
 
 def fnn_run(features, no_layer, weight, bias,
@@ -104,10 +88,10 @@ def para_init(no_layer, no_neurons, no_features):
     weight = []
     bias = []
     for i in range(no_layer):
-        # weight.append(np.random.randn(no_neurons[i + 1], no_neurons[i]) /
-        #               np.sqrt(no_neurons[i]))  # S型激活函数用Xavier原则
-        # 经测试,该原则导致了b的极大不稳定
-        weight.append(np.zeros((no_neurons[i + 1], no_neurons[i])))
+        weight.append(np.random.randn(no_neurons[i + 1], no_neurons[i]) /
+                      np.sqrt(no_neurons[i]))  # S型激活函数用Xavier原则
+        # 经测试,权重初始值一般不能取0,尤其是多层时,会梯度消失
+        # weight.append(np.zeros((no_neurons[i + 1], no_neurons[i])))
         bias.append(np.zeros(no_neurons[i + 1]))  # 直接取0
     return weight, bias
 
@@ -136,7 +120,7 @@ def back_propagation(features, labels, no_layer, weight, bias,
     gradient_b_no = 0
     for layer in range(no_layer):
         for no_f in range(no_features):  # 第几个样本
-            delta = [(labels - a[-1])[:, no_f]]  # 最后一层误差项为 yn - yn^
+            delta = [(a[-1] - labels)[:, no_f]]  # 最后一层误差项为 yn - yn^
             for i in range(no_layer - 2, -1, -1):  # 从L-1层(索引为L-2)往前迭代传播
                 delta.append(logistic_d(z[i][:, no_f]) * np.dot(weight[i + 1].T,
                                                                 delta[-1]))
@@ -184,20 +168,31 @@ def fnn_train(features, labels, no_layer, no_neurons,
 
 
 # 代码运行测试
-train_features = np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-                           [0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
-                           [0, 1, 0, 1, 0, 1, 0, 0, 0, 0]])
-train_labels = np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-                         [0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
-                         [0, 1, 0, 1, 0, 1, 0, 0, 0, 0]])
+train_features = np.array([[1, 0, 0, 4, 0, 0],
+                           [0, 2, 0, 0, 4, 0],
+                           [0, 0, 3, 0, 0, 0.5]])
+train_labels = np.array([[1, 0, 0, 1, 0, 0],
+                         [0, 1, 0, 0, 1, 0],
+                         [0, 0, 1, 0, 0, 1]])
 train_features1 = np.array([[1, 0, 1, 0, 1, 0],
-                            [0, 1, 0, 1, 0, 1]])
+                           [0, 1, 0, 1, 0, 1]])
 train_labels1 = np.array([[1, 0, 1, 0, 1, 0],
-                          [0, 1, 0, 1, 0, 1]])
-set_layer = 1
-set_neurons = [2]
-weight_t, bias_t = fnn_train(train_features1, train_labels1, set_layer,
-                             set_neurons)
-test_features = np.array([[2.2, -4], [2.2, -4]])
-out = fnn_run(train_features1, set_layer, weight_t, bias_t)
-labels = out[1][-1]
+                         [0, 1, 0, 1, 0, 1]])
+test_features = np.array([[2,   0, 4, 0, 1, 0.3],
+                          [1,   1, 5, 0, 1, 0.4],
+                          [0.2, 3, 6, 0, 1, 0.5]])
+
+# 对搭建的fnn进行简单测试
+set_layer = 2
+set_neurons = [5, 3]
+weight_t, bias_t = fnn_train(train_features, train_labels, set_layer,
+                             set_neurons, regular_term=0)
+out = fnn_run(test_features, set_layer, weight_t, bias_t)
+label = out[1][-1]
+
+# 作为对比,对softmax测试
+import sys
+sys.path.append("../task1_ml")
+from classification_models import softmax_train, softmax_calculate
+weight = softmax_train(train_features, train_labels)
+s_label = softmax_calculate(weight, test_features)

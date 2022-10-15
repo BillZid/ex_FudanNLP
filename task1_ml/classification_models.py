@@ -10,7 +10,17 @@
 import numpy as np
 
 
-def softmax_train(sample_features, sample_labels, alpha=0.5, iterations=50):
+def softmax(x):
+    """softmax函数升级版
+
+    可以直接作用于向量,作用于矩阵时,相当于对矩阵各列向量进行softmax,再拼接
+    """
+    vector_1 = np.ones((x.shape[0], x.shape[0]))
+    z = np.exp(x) / np.matmul(vector_1, np.exp(x))  # 此处是矩阵按元素相除
+    return z
+
+
+def softmax_train(features, labels, alpha=0.5, iterations=200):
     """
     这是一个softmax回归模型的训练.
 
@@ -18,47 +28,42 @@ def softmax_train(sample_features, sample_labels, alpha=0.5, iterations=50):
     exp(w_c^T*x)/sum(exp(w_c^T*x)).
 
     Args:
-        sample_features:样本训练集中的特征向量x组成的矩阵,每一列代表一组
-        sample_labels:样本训练集中的标签y组成的矩阵,每一列代表一组
+        features:样本训练集中的特征向量x组成的矩阵,每一列代表一组
+        labels:样本训练集中的标签y组成的矩阵,每一列代表一组
         alpha:迭代更新权重向量时采用的学习率,取值范围0-1
         iterations:训练时的迭代次数
 
     Returns:
         输出softmax函数中以w为列构成的权重矩阵W.
     """
-    sample_size = sample_features.shape[1]  # N,代表样本数目
-    dimension = sample_features.shape[0]  # D,代表样本维度
-    class_number = sample_labels.shape[0]  # C,代表类别数目
-    weight_matrix = np.zeros((dimension, class_number))  # W,代表权重矩阵
-    vector_1 = np.ones((class_number, 1))
+    aug_vector = np.ones((1, features.shape[1]), dtype='uint8')  # 加上偏置
+    # 使特征写成增广形式
+    features = np.concatenate((features, aug_vector), axis=0)
+    size = features.shape[1]  # N,代表样本数目
+    weight = np.zeros((features.shape[0], labels.shape[0]))  # W,代表权重矩阵
     for t in range(iterations):
-        w_temp = np.zeros((dimension, class_number))
-        for n in range(sample_size):
-            x_n = sample_features[:, n]
-            y_n = sample_labels[:, n]
-            y_w_n = np.exp(np.matmul(weight_matrix.T, x_n)) / np.matmul(
-                vector_1.T, np.exp(np.matmul(weight_matrix.T, x_n)))
-            w_temp = w_temp + alpha * np.matmul(np.array([x_n]).T,
-                                                [(y_n - y_w_n)]) / sample_size
-        weight_matrix = weight_matrix + w_temp
-        return weight_matrix
+        w_temp = np.zeros((features.shape[0], labels.shape[0]))
+        for n in range(size):
+            x_n = features[:, n]
+            y_n = labels[:, n]
+            y_w_n = softmax(np.dot(weight.T, x_n))
+            w_temp = w_temp + alpha / size * np.outer(x_n, (y_n - y_w_n).T)
+        weight = weight + w_temp
+    return weight
 
 
-def softmax_calculate(weight, predict_features):
+def softmax_calculate(weight, features):
     """
     这是一个直接计算出softmax预测值(预测标签分布)的函数.
 
     Args:
         weight: 所得到的softmax权重矩阵
-        predict_features: 用来预测的特征x,为矩阵形式,每一列代表一组特征
+        features: 用来预测的特征x,为矩阵形式,每一列代表一组特征
 
     Returns:
         得到一个代表预测出的标签的概率分布的矩阵,每一列为一组预测
     """
-    vector_1 = np.ones((weight.shape[1], 1))
-    labels = np.exp(np.matmul(weight.T, predict_features)) / np.matmul(
-        vector_1.T,
-        np.exp(
-            np.matmul(weight.T,
-                      predict_features)))
+    aug_vector = np.ones((1, features.shape[1]))  # 加上偏置,使特征写成增广形式
+    features = np.concatenate((features, aug_vector), axis=0)
+    labels = softmax(np.dot(weight.T, features))
     return labels

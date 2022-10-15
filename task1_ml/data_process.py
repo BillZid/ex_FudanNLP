@@ -35,11 +35,12 @@ for i in range(len(sentiment)):
     sentiment_vec[sentiment[i - 1], i] = 1
 
 # softmax回归,划分训练集与2万测试集,计算准确率
-softmax_model = softmax_train(word_feature[:, 0:136060],
-                              sentiment_vec[:, 0:136060], iterations=200)
-test_results = softmax_calculate(softmax_model, word_feature[:, 136060:156060])
+weight = softmax_train(word_feature[:, 0:136060],
+                       sentiment_vec[:, 0:136060], iterations=200)
+test_results = softmax_calculate(weight, word_feature[:, 136060:156060])
 test_sentiment = np.argmax(test_results, axis=0)
 accuracy = (test_sentiment == sentiment[136060:156060]).mean()
+print("accuracy = %s" % accuracy)
 
 # 导入预测集并进行数据处理
 test_data = pd.read_csv("sentiment-analysis-on-movie-reviews/test.tsv",
