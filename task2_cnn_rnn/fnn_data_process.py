@@ -6,7 +6,7 @@
 import numpy as np
 import pandas as pd
 from gensim import corpora
-from classification_models import softmax_train, softmax_calculate
+from fnn_diy import fnn_run, fnn_train
 
 # 数据的导入与预处理
 train_data = pd.read_csv("sentiment-analysis-on-movie-reviews/train.tsv",
@@ -34,13 +34,26 @@ sentiment_vec = np.zeros((5, len(sentiment)))
 for i in range(len(sentiment)):
     sentiment_vec[sentiment[i], i] = 1
 
-# softmax回归,划分训练集与2万测试集,计算准确率
-weight = softmax_train(word_feature[:, 0:136060],
-                       sentiment_vec[:, 0:136060])
-test_results = softmax_calculate(weight, word_feature[:, 136060:156060])
+# 3层fnn训练,划分训练集与2万测试集,计算准确率
+set_layer = 3
+set_neurons = [100, 30, 5]
+weight_t, bias_t = fnn_train(word_feature[:, 0:136060],
+                             sentiment_vec[:, 0:136060],
+                             set_layer, set_neurons, iterations=50)
+
+# 测试集上测试
+test_results = fnn_run(word_feature[:, 136060:156060], set_layer,
+                       weight_t, bias_t)[1][-1]
 test_sentiment = np.argmax(test_results, axis=0)
 accuracy = (test_sentiment == sentiment[136060:156060]).mean()
 print("accuracy = %s" % accuracy)
+
+# 在训练数据上测试
+self_test_results = fnn_run(word_feature[:, 116060:136060], set_layer,
+                            weight_t, bias_t)[1][-1]
+self_test_sentiment = np.argmax(self_test_results, axis=0)
+self_accuracy = (self_test_sentiment == sentiment[116060:136060]).mean()
+print("self_accuracy = %s" % self_accuracy)
 
 # 导入预测集并进行数据处理
 test_data = pd.read_csv("sentiment-analysis-on-movie-reviews/test.tsv",
@@ -50,15 +63,15 @@ predict_phrase_id = test_data.loc[:, 'PhraseId'].values
 predict_texts = [[word for word in sentence.lower().split()] for sentence in
                  predict_phrase]
 predict_corpus = [dictionary.doc2bow(text) for text in predict_texts]
+
+# 由稀疏的bow向量生成稠密的文本特征向量
 predict_feature = np.zeros((dict_len, len(predict_phrase)), dtype='uint8')
 for i in range(len(predict_corpus)):
     for bow in predict_corpus[i]:
         predict_feature[bow[0], i] = bow[1]
-predict_results_part01 = softmax_calculate(weight, predict_feature[:, 0:30000])
-predict_results_part02 = softmax_calculate(weight,
-                                           predict_feature[:, 30000:66292])
-predict_results = np.concatenate((predict_results_part01,
-                                  predict_results_part02), axis=1)
+
+# 情感预测并导入
+predict_results = fnn_run(predict_feature, set_layer, weight_t, bias_t)[1][-1]
 predict_sentiment = np.argmax(predict_results, axis=0)
 predict_dataFrame = pd.DataFrame({'PhraseId': predict_phrase_id,
                                   'Sentiment': predict_sentiment})

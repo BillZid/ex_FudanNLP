@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author: Wenzhen
 
-"""尝试实现前馈神经网络模型的搭建(FNN)
+"""尝试实现卷积神经网络模型的搭建(CNN)
 
 """
 
@@ -39,7 +39,24 @@ def tanh(x):
     return z
 
 
-def fnn_run(features, no_layer, weight, bias,
+def convolution_1(filter, features) -> ndarray:
+    """一维卷积操作
+
+    一维等宽,互相关卷积
+    Args:
+        filter (ndarray): 卷积核,长度需为奇数
+        features (ndarray): 特征向量x组成的矩阵,每一列代表一组
+
+    Returns:
+
+    """
+    y = np.zeros(features.shape)
+    for t in range(y.shape[0]):
+        for k in range(filter.shape[1]):
+
+
+
+def cnn_run(features, no_layer, weight, bias,
             activation=logistic) -> Tuple[List[Any], List[Any]]:
     """前馈神经网络FNN的运行(可以对多个向量求解)
 
@@ -194,5 +211,5 @@ label = out[1][-1]
 import sys
 sys.path.append("../task1_ml")
 from classification_models import softmax_train, softmax_calculate
-s_weight = softmax_train(train_features, train_labels)
-s_label = softmax_calculate(s_weight, test_features)
+weight = softmax_train(train_features, train_labels)
+s_label = softmax_calculate(weight, test_features)

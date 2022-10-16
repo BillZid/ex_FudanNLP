@@ -20,7 +20,7 @@ def softmax(x):
     return z
 
 
-def softmax_train(features, labels, alpha=0.5, iterations=200):
+def softmax_train(features, labels, alpha=0.5, iterations=50):
     """
     这是一个softmax回归模型的训练.
 
